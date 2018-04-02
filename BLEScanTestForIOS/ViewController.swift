@@ -25,7 +25,7 @@ class ViewController: UIViewController, CBCentralManagerDelegate {
         let options: Dictionary = [
             CBCentralManagerOptionRestoreIdentifierKey: "BLEScanTestForIOS"
         ]
-        centralManager = CBCentralManager(delegate: self, queue: nil, options: options)
+        centralManager = CBCentralManager(delegate: self, queue: DispatchQueue.main, options: options)
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -82,7 +82,7 @@ class ViewController: UIViewController, CBCentralManagerDelegate {
     
     func centralManager(_ central: CBCentralManager,
                                  willRestoreState dict: [String : Any]) {
-        message("centralManager:willRestoreState")
+        message("centralManager:willRestoreState : central.state=\(central.state.rawValue)")
     }
 
     func message(_ msg:String) {
