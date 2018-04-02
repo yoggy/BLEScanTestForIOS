@@ -10,16 +10,18 @@ class ViewController: UIViewController, CBCentralManagerDelegate {
     var labelSize : CGRect!
     
     var centralManager: CBCentralManager!
-    
+    var deviceNames: [String: Bool] = [:]
+
     var messages : Array<String> = []
     
     override func viewDidLoad() {
         super.viewDidLoad()
-
+        
         textMessage.numberOfLines = 0
         textMessage.lineBreakMode = NSLineBreakMode.byCharWrapping
         labelSize = textMessage.frame;
-        
+
+        message("viewDidLoad()");
         updateUI(false)
         
         let options: Dictionary = [
@@ -28,18 +30,40 @@ class ViewController: UIViewController, CBCentralManagerDelegate {
         centralManager = CBCentralManager(delegate: self, queue: DispatchQueue.main, options: options)
     }
 
+    override func viewDidAppear(_ animated: Bool) {
+        message("viewDidAppear()");
+    }
+    
     override func viewWillDisappear(_ animated: Bool) {
-        if (centralManager.isScanning == true) {
-            centralManager.stopScan();
-        }
+        message("viewWillDisappear()");
     }
     
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
+        message("didReceiveMemoryWarning()");
     }
 
+    /////////////////////////////////////////////////////////////////////////////
+    
     @IBAction func onButtonStartTouchDown(_ sender: Any) {
-        
+        message("onButtonStartTouchDown()");
+        bleStartScan()
+    }
+    
+    @IBAction func onButtonStopTouchDown(_ sender: Any) {
+        message("onButtonStopTouchDown()");
+        bleStopScan()
+    }
+
+    /////////////////////////////////////////////////////////////////////////////
+
+    func updateUI(_ flag:Bool) {
+        buttonStart.isEnabled = !flag
+        buttonStop.isEnabled = flag
+    }
+    
+    func bleStartScan() {
+        message("bleStartScan")
         centralManager.scanForPeripherals(
             withServices: [CBUUID(string: "b3b36901-50d3-4044-808d-50835b13a6cd")],
             options: [CBCentralManagerScanOptionAllowDuplicatesKey : true]
@@ -47,16 +71,45 @@ class ViewController: UIViewController, CBCentralManagerDelegate {
         updateUI(true)
     }
     
-    @IBAction func onButtonStopTouchDown(_ sender: Any) {
+    func bleStopScan() {
+        message("bleStopScan")
+        centralManager.stopScan()
         updateUI(false)
         
+        deviceNames.removeAll()
+    }
+    
+    func bleRestartScan() {
+        message("bleRestartScan")
+
+        // clear flag
+        deviceNames.keys.forEach { key in
+            deviceNames[key] = false
+        }
+        
         centralManager.stopScan()
+
+        centralManager.scanForPeripherals(
+            withServices: [CBUUID(string: "b3b36901-50d3-4044-808d-50835b13a6cd")],
+            options: [CBCentralManagerScanOptionAllowDuplicatesKey : true]
+        )
     }
 
-    func updateUI(_ flag:Bool) {
-        buttonStart.isEnabled = !flag
-        buttonStop.isEnabled = flag
+    func checkDeviceFlags() -> Bool {
+        var count = 0;
+        deviceNames.keys.forEach { key in
+            if deviceNames[key] == true {
+                count += 1
+            }
+        }
+        if (count == deviceNames.count) {
+            return true
+        }
+        
+        return false
     }
+    
+    /////////////////////////////////////////////////////////////////////////////
 
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         
@@ -78,19 +131,38 @@ class ViewController: UIViewController, CBCentralManagerDelegate {
     
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         message("centralManager:didDiscover: peripheral:\(peripheral), RSSI:\(RSSI)")
+        
+        guard let kCBAdvDataLocalName = advertisementData["kCBAdvDataLocalName"] as? String else {
+            return;
+        }
+        
+        let state: UIApplicationState = UIApplication.shared.applicationState
+        if state != .background {
+            // append device names...
+            deviceNames[kCBAdvDataLocalName] = false
+        }
+        else {
+            deviceNames[kCBAdvDataLocalName] = true
+            
+            if (checkDeviceFlags() == true) {
+                bleRestartScan()
+            }
+        }
     }
     
     func centralManager(_ central: CBCentralManager,
                                  willRestoreState dict: [String : Any]) {
         message("centralManager:willRestoreState : central.state=\(central.state.rawValue)")
+        self.centralManager = central
     }
+
+    /////////////////////////////////////////////////////////////////////////////
 
     func message(_ msg:String) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss : "
         let now = Date()
         let date_str = formatter.string(from: now)
-        
         
         print(date_str + msg)
         
