@@ -97,47 +97,41 @@ class ViewController: UIViewController, CBCentralManagerDelegate {
 
     func checkDeviceFlags() -> Bool {
         var count = 0;
+        var msg = "checkDeviceFlags() : deviceNames:"
         deviceNames.keys.forEach { key in
+            msg += "\(key)=\(deviceNames[key] ?? false), "
             if deviceNames[key] == true {
                 count += 1
             }
         }
         if (count == deviceNames.count) {
+            msg += "return true"
+            message(msg)
             return true
         }
         
+        msg += "return false"
+        message(msg)
+
         return false
     }
     
     /////////////////////////////////////////////////////////////////////////////
 
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
-        
-        switch (central.state) {
-        case .poweredOff:
-            message("centralManagerDidUpdateState : central.state = .poweredOff")
-        case .poweredOn:
-            message("centralManagerDidUpdateState : central.state = .poweredOn")
-        case .resetting:
-            message("centralManagerDidUpdateState : central.state = .resetting")
-        case .unauthorized:
-            message("centralManagerDidUpdateState : central.state = .unauthorized")
-        case .unknown:
-            message("centralManagerDidUpdateState : central.state = .unknown")
-        case .unsupported:
-            message("centralManagerDidUpdateState : central.state = .unsupported")
-        }
+        message("centralManagerDidUpdateState")
+        printCentralState(central)
     }
-    
+
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
-        message("centralManager:didDiscover: peripheral:\(peripheral), RSSI:\(RSSI)")
-        
         guard let kCBAdvDataLocalName = advertisementData["kCBAdvDataLocalName"] as? String else {
             return;
         }
-        
+
         let state: UIApplicationState = UIApplication.shared.applicationState
-        if state != .background {
+        message("centralManager:didDiscover: name:\(kCBAdvDataLocalName), RSSI:\(RSSI), state=\(state.rawValue)")
+        
+        if state == .active {
             // append device names...
             deviceNames[kCBAdvDataLocalName] = false
         }
@@ -158,6 +152,23 @@ class ViewController: UIViewController, CBCentralManagerDelegate {
 
     /////////////////////////////////////////////////////////////////////////////
 
+    func printCentralState(_ central:CBCentralManager) {
+        switch (central.state) {
+        case .poweredOff:
+            message("central.state = .poweredOff")
+        case .poweredOn:
+            message("central.state = .poweredOn")
+        case .resetting:
+            message("central.state = .resetting")
+        case .unauthorized:
+            message("central.state = .unauthorized")
+        case .unknown:
+            message("central.state = .unknown")
+        case .unsupported:
+            message("central.state = .unsupported")
+        }
+    }
+    
     func message(_ msg:String) {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss : "
@@ -182,4 +193,3 @@ class ViewController: UIViewController, CBCentralManagerDelegate {
         textMessage.sizeToFit()
     }
 }
-
